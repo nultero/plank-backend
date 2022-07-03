@@ -10,25 +10,25 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var userCache = map[string][]byte{}
+const (
+	msgLastRq     = "couldn't make sense of last request"
+	msgMangldRq   = "mangled json on request"
+	msgUserExists = "user already exists"
+)
 
-// dumb prototype of a db pwd
-func init() {
-	mc, err := bcrypt.GenerateFromPassword([]byte("turbulence"), bcrypt.DefaultCost-6)
-	if err != nil {
-		panic(err)
-	}
+var (
+	errLRq        = errors.New(msgLastRq)
+	errMangldRq   = errors.New(msgMangldRq)
+	errUserExists = errors.New(msgUserExists)
+)
 
-	userCache["jackson"] = mc
-}
-
-func login(w http.ResponseWriter, rq *http.Request) {
+func parseUreqs(w http.ResponseWriter, rq *http.Request) (map[string]string, error) {
 	bytes := make([]byte, 50)
 	n, err := rq.Body.Read(bytes)
 	if err != nil {
 		if !errors.Is(err, io.EOF) {
-			fmt.Fprintln(w, "couldn't make sense of last request")
-			return
+			fmt.Fprintln(w, msgLastRq)
+			return nil, errLRq
 		}
 	}
 
@@ -36,7 +36,35 @@ func login(w http.ResponseWriter, rq *http.Request) {
 	mp := map[string]string{}
 	err = json.Unmarshal(bytes, &mp)
 	if err != nil {
-		fmt.Fprintln(w, "mangled json on request")
+		fmt.Fprintln(w, msgMangldRq)
+		return nil, errMangldRq
+	}
+
+	return mp, nil
+}
+
+func createUser(w http.ResponseWriter, rq *http.Request) {
+	mp, err := parseUreqs(w, rq)
+	if err != nil {
+		return
+	}
+
+	for k, v := range mp {
+		if userCache.hasUser(k) {
+			fmt.Fprintln(w, msgUserExists)
+			return
+		}
+
+		fmt.Println(v)
+
+	}
+
+}
+
+func login(w http.ResponseWriter, rq *http.Request) {
+
+	mp, err := parseUreqs(w, rq)
+	if err != nil {
 		return
 	}
 
@@ -52,5 +80,4 @@ func login(w http.ResponseWriter, rq *http.Request) {
 		fmt.Fprintln(w, "not a match")
 		break
 	}
-
 }

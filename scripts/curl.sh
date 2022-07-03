@@ -3,7 +3,7 @@
 # match
 curl --header "Content-Type: application/json" \
      --request POST \
-     --data '{"jackson":"turbulence"}' \
+     --data '{"jerry":"yahoo"}' \
      http://localhost:9000/auth/logn
 
 # not a match
